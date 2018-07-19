@@ -1607,6 +1607,15 @@ implements RestrictedAccess, Threadable {
 
         return true;
     }
+    
+    function onDuedateChange() {
+        global $ost, $cfg;
+
+        $alert=sprintf('La fecha estimada de resolución del ticket #%s ha sido modificada. ', $this->getNumber())."\n";
+        $ost->alertAdmin(sprintf('Fecha estimada de resolución modificada (#%s)', $this->getNumber()), $alert);
+
+        return true;
+    }
 
     function onResponse($response, $options=array()) {
         $this->isanswered = 1;
@@ -2988,6 +2997,7 @@ implements RestrictedAccess, Threadable {
             return false;
 
         $this->topic_id = $vars['topicId'];
+        
         if ($this->sla_id != $vars['slaId']) {
             $this->sla_id = $vars['slaId'];
             // Nuevo SLA así que se desmarca la posible marca actual
@@ -2995,19 +3005,23 @@ implements RestrictedAccess, Threadable {
             // Se programa para calcular de nuevo la fecha estimada de retraso
             $actualizarEstimacion = 1;
         }
+        
         $this->source = $vars['source'];
+        
+        $fecha_nueva = trim($vars['duedate']." ".($vars['duedate']?$vars['time'].':00':''));
+        if (strcasecmp($this->duedate, $fecha_nueva) != 0) {
+            // Nueva fecha de retraso así que se desmarca la posible marca actual
+            $this->isoverdue = 0;
+            // Y se programa para calcular de nuevo la fecha estimada
+            $actualizarEstimacion = 1;
+        }
+        
         $this->duedate = $vars['duedate']
             ? date('Y-m-d G:i',Misc::dbtime($vars['duedate'].' '.$vars['time']))
             : null;
 
         if ($vars['user_id'])
             $this->user_id = $vars['user_id'];
-        if ($vars['duedate']) {
-            // Nueva fecha de retraso así que se desmarca la posible marca actual
-            $this->isoverdue = 0;
-            // Y se programa para calcular de nuevo la fecha estimada
-            $actualizarEstimacion = 1;
-        }
 
         $changes = array();
         foreach ($this->dirty as $F=>$old) {
@@ -3047,8 +3061,10 @@ implements RestrictedAccess, Threadable {
             $this->logEvent('edited', $changes);
 
         // Update estimated due date in database
-        if ($actualizarEstimacion)
+        if ($actualizarEstimacion) {
             $this->updateEstDueDate();
+            $this->onDuedateChange();
+        }
 
         // Clear overdue flag if duedate or SLA changes and the ticket is no longer overdue.
         // Lo comento porque no es suficiente con que no haya fecha estimada de retraso

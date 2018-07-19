@@ -1542,7 +1542,10 @@ class SelectionField extends FormField {
             reset($value);
         }
         if ($value && is_array($value))
-            $value = array(JsonDataEncoder::encode($value), array_keys($value)[0]);
+            // Se elimina la codificación JSON de arrays generados por listas
+            // desplegables y que se guarda en ost_form_entry_values.value
+            //$value = array(JsonDataEncoder::encode($value), array_keys($value)[0]);
+            $value = array($value[array_keys($value)[0]], array_keys($value)[0]);
 
         return $value;
     }

@@ -107,6 +107,12 @@ class Export {
                     ->filter(array('answers__field__name' => 'acciones',
                             'object_id' => new SqlField('ticket_id', 1),
                             'object_type' => 'T',
+                            'form__title' => 'Notificación y cierre de desviaciones')),  // OJO! No se puede cambiar el nombre en la web!!
+                'tipo' => DynamicFormEntry::objects()
+                    ->values('answers__value')
+                    ->filter(array('answers__field__name' => 'tipo',
+                            'object_id' => new SqlField('ticket_id', 1),
+                            'object_type' => 'T',
                             'form__title' => 'Notificación y cierre de desviaciones'))  // OJO! No se puede cambiar el nombre en la web!!
             ));
         
@@ -118,6 +124,7 @@ class Export {
         return self::dumpQuery($tickets,
             array(
                 'number' =>         __('Number'),
+                'tipo' =>           __('Tipo'),
                 'created' =>        __('Fecha Desviación'),
                 'cdata.subject' =>  __('Subject'),
                 'descripcion' => __('Description'),

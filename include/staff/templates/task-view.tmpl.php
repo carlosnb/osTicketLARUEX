@@ -463,7 +463,9 @@ else
         <?php
         if ($role->hasPerm(TaskModel::PERM_REPLY)) { ?>
         <li class="active"><a href="#task_reply"><?php echo __('Post Update');?></a></li>
-        <li><a href="#task_note"><?php echo __('Post Internal Note');?></a></li>
+        <!-- La nota interna y la publicación de actualización no se diferencian en nada en las tareas
+            así que lo comentamos -->
+        <!--<li><a href="#task_note"><?php echo __('Post Internal Note');?></a></li>-->
         <?php
         }?>
     </ul>

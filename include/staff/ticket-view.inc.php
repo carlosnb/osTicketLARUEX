@@ -635,7 +635,7 @@ if ($errors['err'] && isset($_POST['a'])) {
                 </td>
                 <td>
 <?php if ($cfg->isCannedResponseEnabled()) { ?>
-                    <select id="cannedResp" name="cannedResp">
+                    <!--<select id="cannedResp" name="cannedResp">
                         <option value="0" selected="selected"><?php echo __('Select a canned response');?></option>
                         <option value='original'><?php echo __('Original Message'); ?></option>
                         <option value='lastmessage'><?php echo __('Last Message'); ?></option>
@@ -648,7 +648,7 @@ if ($errors['err'] && isset($_POST['a'])) {
                         }
                         ?>
                     </select>
-                    <br>
+                    <br>-->
 <?php } # endif (canned-resonse-enabled)
                     $signature = '';
                     switch ($thisstaff->getDefaultSignatureType()) {
@@ -665,9 +665,7 @@ if ($errors['err'] && isset($_POST['a'])) {
                         data-signature-field="signature" data-dept-id="<?php echo $dept->getId(); ?>"
                         data-signature="<?php
                             echo Format::htmlchars(Format::viewableImages($signature)); ?>"
-                        placeholder="<?php echo __(
-                        'Start writing your response here. Use canned responses from the drop-down above'
-                        ); ?>"
+                        placeholder="<?php echo __('Escriba su respuesta aquí'); ?>"
                         rows="9" wrap="soft"
                         class="<?php if ($cfg->isRichTextEnabled()) echo 'richtext';
                             ?> draft draft-delete" <?php

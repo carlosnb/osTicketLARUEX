@@ -1497,6 +1497,11 @@ class BooleanField extends FormField {
         return $this->to_php($value);
     }
     function to_php($value) {
+        if ($value ==="Sí") {
+            return true;
+        } elseif ($value === "No") {
+            return false;
+        }
         return $value ? true : false;
     }
 

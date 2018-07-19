@@ -28,6 +28,7 @@ $sort_options = array(
     'number' =>             __('Ticket Number'),
     'answered' =>           __('Most Recently Answered'),
     'closed' =>             __('Most Recently Closed'),
+    'verified' =>           'Verificado Más Reciente',
     'hot' =>                __('Longest Thread'),
     'relevance' =>          __('Relevance'),
 );
@@ -86,7 +87,7 @@ case 'closed':
     $status='closed';
     $results_type=__('Closed Tickets');
     $showassigned=true; //closed by.
-    $queue_sort_options = array('closed', 'priority,due', 'due',
+    $queue_sort_options = array('closed', 'verified', 'priority,due', 'due',
         'priority,updated', 'priority,created', 'answered', 'number', 'hot');
     break;
 case 'solved':
@@ -319,6 +320,15 @@ case 'closed':
     $tickets->order_by('closed', $orm_dir);
     break;
 
+case 'verified':
+    $queue_columns['date']['heading'] = 'Fecha de verificación';
+    $queue_columns['date']['sort'] = $sort_cols;
+    $queue_columns['date']['sort_col'] = $date_col = 'verified';
+    $queue_columns['date']['sort_dir'] = $sort_dir;
+    $tickets->values('verified');
+    $tickets->order_by('verified', $orm_dir);
+    break;
+
 case 'answered':
     $queue_columns['date']['heading'] = __('Last Response');
     $queue_columns['date']['sort'] = $sort_cols;
@@ -528,7 +538,7 @@ return false;">
                 $flag=null;
                 if($T['lock__staff_id'] && $T['lock__staff_id'] != $thisstaff->getId())
                     $flag='locked';
-                elseif($T['isoverdue'])
+                elseif($T['isoverdue'] && strcasecmp($T['status__state'],'open') == 0)
                     $flag='overdue';
 
                 $lc='';
@@ -549,7 +559,7 @@ return false;">
                 }
                 if ($T["verified"])
                     $background_color = "#CCCCFF;";
-                elseif ($T["isoverdue"] > 0 && !$T["sla__name"])  // Ha vencido definitivamente
+                elseif ($T["isoverdue"] > 0 && !$T["sla__name"] && strcasecmp($T['status__state'],'open') == 0)  // Ha vencido definitivamente y está abierto
                     $background_color = "#FFCCCC;";
                 else
                     unset($background_color);

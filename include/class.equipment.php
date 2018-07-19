@@ -811,7 +811,7 @@ implements Threadable {
                         $this->name = $values[1]; // El valor nuevo
                     }
                     if ($field->get('name') == 'bookable') {
-                        $this->bookable = $values[1]; // El valor nuevo
+                        $this->bookable = $values[1]=="No"?0:1; // El valor nuevo
                     }
                 }
             }
