@@ -1551,6 +1551,7 @@ implements RestrictedAccess, Threadable {
                 }
                 $alert = $this->replaceVars($msg, array('recipient' => $staff));
                 $email->sendAlert($staff, $alert['subj'], $alert['body'], null, $options);
+                syslog(LOG_INFO, "osTicket - Se ha mandado un correo por nuevo ticket ".$this->getNumber()." a ".$staff->getEmail());
                 $sentlist[] = $staff->getEmail();
             }
 
@@ -1561,6 +1562,7 @@ implements RestrictedAccess, Threadable {
                 $alert = $this->replaceVars($msg, array('recipient' => 'Admin'));
                 $email->sendAlert($cfg->getAdminEmail(), $alert['subj'],
                         $alert['body'], null, $options);
+                syslog(LOG_INFO, "osTicket - Se ha mandado un correo por nuevo ticket ".$this->getNumber()." al administrador ".$cfg->getAdminEmail());
             }
 
         }
@@ -1926,6 +1928,7 @@ implements RestrictedAccess, Threadable {
                 }
                 $alert = $this->replaceVars($msg, array('recipient' => $staff));
                 $email->sendAlert($staff, $alert['subj'], $alert['body'], null, $options);
+                syslog(LOG_INFO, "osTicket - Se ha mandado un correo por asignación de ticket ".$this->getNumber()." a ".$staff->getEmail());
                 $sentlist[] = $staff->getEmail();
             }
         }
