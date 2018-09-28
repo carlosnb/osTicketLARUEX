@@ -2564,16 +2564,16 @@ class TicketStateField extends ChoiceField {
                 'verb' => /* @trans, @context "ticket state action" */ 'Close'
                 ),
             'solved' => array(
-                'name' => /* @trans, @context "ticket state name" */ 'Solved',
-                'verb' => /* @trans, @context "ticket state action" */ 'Solve'
-                )
+                'name' => /* @trans, @context "ticket state name" */ 'Ejecutado',
+                'verb' => /* @trans, @context "ticket state action" */ 'Ejecutar'
+                ),
+            'verified' => array(
+                'name' => /* @trans, @context "ticket state name" */ 'Verificado',
+                'verb' => /* @trans, @context "ticket state action" */ 'Verificar'
+                ),
             );
     // Private states
     static $_privatestates = array(
-            'archived' => array(
-                'name' => /* @trans, @context "ticket state name" */ 'Archived',
-                'verb' => /* @trans, @context "ticket state action" */ 'Archive'
-                ),
             'deleted'  => array(
                 'name' => /* @trans, @context "ticket state name" */ 'Deleted',
                 'verb' => /* @trans, @context "ticket state action" */ 'Delete'

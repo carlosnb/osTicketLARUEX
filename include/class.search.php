@@ -1185,7 +1185,8 @@ class TicketStateChoiceField extends ChoiceField {
         return array(
             'open' => __('Open'),
             'closed' => __('Closed'),
-            'archived' => _P('ticket state name', 'Archived'),
+            'solved' => _P('ticket state name', 'Ejecutado'),
+            'verified' => _P('ticket state name', 'Verificado'),
             'deleted' => _P('ticket state name','Deleted'),
         );
     }

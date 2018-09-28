@@ -87,12 +87,19 @@ case 'closed':
     $status='closed';
     $results_type=__('Closed Tickets');
     $showassigned=true; //closed by.
-    $queue_sort_options = array('closed', 'verified', 'priority,due', 'due',
+    $queue_sort_options = array('closed', 'priority,due', 'due',
         'priority,updated', 'priority,created', 'answered', 'number', 'hot');
+    break;
+case 'verified':
+    $status='verified';
+    $results_type = 'Tickets Verificados';
+    $queue_sort_options = array('verified', 'priority,updated', 'updated',
+        'priority,due', 'due', 'priority,created', 'answered', 'number',
+        'hot');
     break;
 case 'solved':
     $status='solved';
-    $results_type = 'Tickets Resueltos';
+    $results_type = 'Tickets Ejecutados';
     $queue_sort_options = array('priority,updated', 'updated',
         'priority,due', 'due', 'priority,created', 'answered', 'number',
         'hot');
@@ -318,6 +325,15 @@ case 'closed':
     $queue_columns['date']['sort_dir'] = $sort_dir;
     $tickets->values('closed');
     $tickets->order_by('closed', $orm_dir);
+    break;
+
+case 'solved':
+    $queue_columns['date']['heading'] = __('Fecha de Ejecución');
+    $queue_columns['date']['sort'] = $sort_cols;
+    $queue_columns['date']['sort_col'] = $date_col = 'solved';
+    $queue_columns['date']['sort_dir'] = $sort_dir;
+    $tickets->values('solved');
+    $tickets->order_by('solved', $orm_dir);
     break;
 
 case 'verified':

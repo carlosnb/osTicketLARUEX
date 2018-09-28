@@ -102,6 +102,7 @@ class TicketModel extends VerySimpleModel {
     const PERM_CLOSE    = 'ticket.close';
     const PERM_DELETE   = 'ticket.delete';
     const PERM_VERIFY   = 'ticket.verify';
+    const PERM_REOPEN   = 'ticket.reopen';
 
     const TEXTO_PREASIGNACION_AGENTE = "Preasignación de agente hecha por el usuario";
     const TEXTO_PREASIGNACION_EQUIPO = "Preasignación de equipo hecha por el usuario";
@@ -147,6 +148,11 @@ class TicketModel extends VerySimpleModel {
                 /* @trans */ 'Verify',
                 'desc'  =>
                 /* @trans */ 'Ability to verify tickets'),
+            self::PERM_REOPEN => array(
+                'title' =>
+                /* @trans */ 'Reopen',
+                'desc'  =>
+                /* @trans */ 'Capacidad de reabrir tickets cerrados'),
             );
 
     // Ticket Sources
@@ -301,20 +307,23 @@ implements RestrictedAccess, Threadable {
     function isOpen() {
         return $this->hasState('open') || $this->isSolved();
     }
-    
+        
     function isSolved() {
         return $this->hasState('solved');
     }
     
     function isVerified() {
-        return $this->verified;
+        return $this->hasState('verified');
     }
 
     function isReopened() {
         return null !== $this->getReopenDate();
     }
 
-    function isReopenable() {
+    function isReopenable($role) {
+        if ($this->isClosed()) {
+            return $this->getStatus()->isReopenable() && $role->hasPerm(TicketModel::PERM_REOPEN);
+        }
         return $this->getStatus()->isReopenable();
     }
 
@@ -322,50 +331,72 @@ implements RestrictedAccess, Threadable {
          return $this->hasState('closed');
     }
 
-    function isCloseable() {
+    function isCloseable(&$warning) {
 
         if ($this->isClosed())
             return true;
 
-        $warning = null;
+        $warning = "";
         if ($this->getMissingRequiredFields()) {
-            $warning = sprintf(
-                    __( '%1$s is missing data on %2$s one or more required fields %3$s and cannot be closed'),
-                    __('This ticket'),
-                    '', '');
+            $warning = sprintf('A este ticket le faltan uno o más campos requeridos y no puede ser cerrado');
+            return false;
         } elseif (($num=$this->getNumOpenTasks())) {
-            $warning = sprintf(__('%1$s has %2$d open tasks and cannot be closed'),
-                    __('This ticket'), $num);
+            $warning = sprintf('Este ticket tiene %1$d tareas pendientes y no puede ser cerrado', $num);
+            return false;
         }
 
-        return $warning ?: true;
+        return true;
     }
     
-    function isSolveable() {
+    function isSolveable(&$warning) {
 
         if ($this->isSolved())
             return true;
 
-        $warning = null;
+        $warning = "";
         
-        if ($this->isClosed())
-            $warning = 'Este ticket está cerrado';
-
-        if ($this->getMissingFieldsRequiredToSolve()) {
-            $warning = sprintf(
-                    __( '%1$s is missing data on %2$s one or more required fields %3$s and cannot be solved'),
-                    __('This ticket'),
-                    '', '');
-        } elseif (($num=$this->getNumOpenTasks())) {
-            $warning = sprintf(__('%1$s has %2$d open tasks and cannot be solved'),
-                    __('This ticket'), $num);
+        if ($this->isClosed()) {
+            //$warning = 'Este ticket está cerrado';
+            return false;
+        }
+        
+        if ($this->isVerified()) {
+            //$warning = 'Este ticket está verificado';
+            return false;
         }
 
-        return $warning ?: true;
-    }
+        if ($this->getMissingFieldsRequiredToSolve()) {
+            $warning = sprintf('A este ticket le faltan uno o más campos requeridos y no puede ser ejecutado');
+            return false;
+        } elseif (($num=$this->getNumOpenTasks())) {
+            $warning = sprintf('Este ticket tiene %1$d tareas pendientes y no puede ser ejecutado', $num);
+            return false;
+        }
 
-    function isArchived() {
-         return $this->hasState('archived');
+        return true;
+    }
+    
+    function isVerifiable(&$warning) {
+
+        if ($this->isVerified())
+            return true;
+
+        $warning = "";
+        
+        if ($this->isClosed()) {
+            //$warning = 'Este ticket está cerrado';
+            return false;
+        }
+
+        if ($this->getMissingRequiredFields()) {
+            $warning = sprintf('A este ticket le faltan uno o más campos requeridos y no puede ser verificado');
+            return false;
+        } elseif (($num=$this->getNumOpenTasks())) {
+            $warning = sprintf('Este ticket tiene %1$d tareas pendientes y no puede ser verificado', $num);
+            return false;
+        }
+
+        return true;
     }
 
     function isDeleted() {
@@ -373,7 +404,7 @@ implements RestrictedAccess, Threadable {
     }
 
     function isAssigned() {
-        return $this->isOpen() && ($this->getStaffId() || $this->getTeamId());
+        return !$this->isClosed() && ($this->getStaffId() || $this->getTeamId());
     }
 
     function isOverdue() {
@@ -397,7 +428,7 @@ implements RestrictedAccess, Threadable {
         if (($staff->showAssignedOnly()
             || !$staff->canAccessDept($this->getDeptId()))
             // only open tickets can be considered assigned
-            && $this->isOpen()
+            && !$this->isClosed()
             && $staff->getId() != $this->getStaffId()
             && !$staff->isTeamMember($this->getTeamId())
         ) {
@@ -768,7 +799,7 @@ implements RestrictedAccess, Threadable {
 
     function getAssignee() {
 
-        if (!$this->isOpen() || !$this->isAssigned())
+        if ($this->isClosed() || !$this->isAssigned())
             return false;
 
         if ($this->staff)
@@ -956,7 +987,7 @@ implements RestrictedAccess, Threadable {
                 foreach ($dept->getAssignees() as $member)
                     $assignees['s'.$member->getId()] = $member;
 
-                if (!$source && $this->isOpen() && $this->staff)
+                if (!$source && !$this->isClosed() && $this->staff)
                     $assignee = sprintf('s%d', $this->staff->getId());
                 $prompt = __('Select an Agent');
                 break;
@@ -965,7 +996,7 @@ implements RestrictedAccess, Threadable {
                     foreach ($teams as $id => $name)
                         $assignees['t'.$id] = $name;
 
-                if (!$source && $this->isOpen() && $this->team)
+                if (!$source && $this->isClosed() && $this->team)
                     $assignee = sprintf('t%d', $this->team->getId());
                 $prompt = __('Select a Team');
                 break;
@@ -1257,8 +1288,16 @@ implements RestrictedAccess, Threadable {
         // Double check permissions (when changing status)
         if ($role && $this->getStatusId()) {
             switch ($status->getState()) {
+            case 'verified':
+                if (!($role->hasPerm(TicketModel::PERM_VERIFY)))
+                    return false;
+                break;
             case 'closed':
                 if (!($role->hasPerm(TicketModel::PERM_CLOSE)))
+                    return false;
+                break;
+            case 'open':
+                if ($this->isClosed() && !($role->hasPerm(TicketModel::PERM_REOPEN)))
                     return false;
                 break;
             case 'deleted':
@@ -1322,11 +1361,40 @@ implements RestrictedAccess, Threadable {
                     $t->deleteDrafts();
                 };
                 break;
+            case 'verified':
+                // Check if ticket is verifiable
+                $verifiable = $this->isVerifiable();
+                if ($verifiable !== true)
+                    $errors['err'] = $verifiable ?: sprintf('Este ticket no puede ser verificado');
+
+                if ($errors)
+                    return false;
+                
+                $this->verified = $this->lastupdate = SqlFunction::NOW();
+                $this->duedate = null;
+                $this->sla = null;
+                $this->updateEstDueDate();
+                $this->clearOverdue(false);
+                
+                // Notificar el cierre según el tipo de ticket
+                if (($dept = $this->getDept())
+                        && ($tpl = $dept->getTemplate())
+                        && ($msg = $tpl->getClosedAlertMsgTemplate())
+                        && ($email = $dept->getAlertEmail())) {
+                    $msg = $this->replaceVars($msg->asArray(),
+                        array('comments' => $comments)
+                    );
+                    
+                    // Si se encontró algún responsable se notifica el cierre
+                    $this->notificarResponsable($idNotificacion, $msg, $email);
+                }
+                
+                break;
             case 'solved':
                 // Check if ticket is solveable
                 $solveable = $this->isSolveable();
                 if ($solveable !== true)
-                    $errors['err'] = $solveable ?: sprintf(__('%s cannot be solved'), __('This ticket'));
+                    $errors['err'] = $solveable ?: 'Este ticket no puede ser ejecutado';
 
                 if ($errors)
                     return false;
@@ -1343,16 +1411,13 @@ implements RestrictedAccess, Threadable {
                     // Si se encontró algún responsable se notifica la resolución
                     $this->notificarResponsable($idNotificacion, $msg, $email);
                 }
-
-                // If the ticket is not open then clear answered flag
-                if (!$this->isOpen())
-                    $this->isanswered = 0;
                 
                 break;
             case 'open':
                 // TODO: check current status if it allows for reopening
                 if ($this->isClosed()) {
-                    $this->closed = $this->lastupdate = $this->reopened = SqlFunction::NOW();
+                    $this->lastupdate = $this->reopened = SqlFunction::NOW();
+                    $this->verified = null;
                     $ecb = function ($t) {
                         $t->logEvent('reopened', false, null, 'closed');
                     };
@@ -1705,7 +1770,7 @@ implements RestrictedAccess, Threadable {
         // We're also checking autorespond flag because we don't want to
         // reopen closed tickets on auto-reply from end user. This is not to
         // confused with autorespond on new message setting
-        if ($reopen && $this->isClosed() && $this->isReopenable()) {
+        if ($reopen && $this->isClosed() && $this->isReopenable($role)) {
             $this->reopen();
             // Auto-assign to closing staff or the last respondent if the
             // agent is available and has access. Otherwise, put the ticket back
@@ -1805,7 +1870,7 @@ implements RestrictedAccess, Threadable {
             if (isset($vars['assignee'])
                     && $vars['assignee'] instanceof Staff)
                  $recipients[] = $vars['assignee'];
-            elseif ($this->isOpen() && ($assignee = $this->getStaff()))
+            elseif (!$this->isClosed() && ($assignee = $this->getStaff()))
                 $recipients[] = $assignee;
 
             if ($team = $this->getTeam())
@@ -2706,7 +2771,7 @@ implements RestrictedAccess, Threadable {
         $claim = ($claim
                 && $cfg->autoClaimTickets()
                 && !$dept->disableAutoClaim());
-        if ($claim && $thisstaff && $this->isOpen() && !$this->getStaffId()) {
+        if ($claim && $thisstaff && !$this->isClosed() && !$this->getStaffId()) {
             $this->setStaffId($thisstaff->getId()); //direct assignment;
         }
 
@@ -3173,6 +3238,17 @@ implements RestrictedAccess, Threadable {
             if ($showanswered || !$S['isanswered']) {
                 if (!($hideassigned && ($S['staff_id'] || $S['team_id'])))
                     $stats['solved'] += $S['count'];
+            }
+        }
+        
+        $blocks = Ticket::objects()
+            ->filter(Q::any($visibility))
+            ->filter(array('status__state' => 'verified'))
+            ->aggregate(array('count' => SqlAggregate::COUNT('ticket_id')));
+        foreach ($blocks as $S) {
+            if ($showanswered || !$S['isanswered']) {
+                if (!($hideassigned && ($S['staff_id'] || $S['team_id'])))
+                    $stats['verified'] += $S['count'];
             }
         }
         
@@ -3672,7 +3748,7 @@ implements RestrictedAccess, Threadable {
         }
 
         // Only do assignment if the ticket is in an open state
-        if ($ticket->isOpen()) {
+        if (!$ticket->isClosed()) {
             // Asigno el ticket al agente que escoge el usuario o si no...
             // Assign ticket to staff or team (new ticket by staff)
             if ($idPreasignacion != "") {

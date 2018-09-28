@@ -286,6 +286,7 @@ class Thread extends VerySimpleModel {
      *      - body - (string) email message body (decoded)
      */
     function postEmail($mailinfo, $entry=null) {
+        global $thisstaff;
         // +==================+===================+=============+
         // | Orig Thread-Type | Reply Thread-Type | Requires    |
         // +==================+===================+=============+
@@ -302,7 +303,7 @@ class Thread extends VerySimpleModel {
         elseif ($object instanceof Ticket && (
                !$mailinfo['staffId']
             && $object->isClosed()
-            && !$object->isReopenable()
+            && !$object->isReopenable($thisstaff->getRole($object->getDept()))
         )) {
             // Ticket is closed, not reopenable, and email was not submitted
             // by an agent. Email cannot be submitted

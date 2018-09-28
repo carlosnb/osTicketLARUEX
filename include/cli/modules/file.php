@@ -480,7 +480,7 @@ class FileManager extends Module {
                 $qs->filter(array('bk'=>$val));
                 break;
             case 'status':
-                if (!in_array($val, array('open','closed','archived','deleted')))
+                if (!in_array($val, array('open','closed','verified','solved','deleted')))
                     $this->fail($val.': Unknown ticket status');
 
                 $qs->filter(array('attachments__thread_entry__thread__ticket__status__state'=>$val));

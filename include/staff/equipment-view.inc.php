@@ -17,20 +17,6 @@ $id    = $equipment->getId();    // Equipment ID.
 $dept  = $equipment->getDept();  //Dept
 $role  = $thisstaff->getRole($dept);
 
-//Useful warnings and errors the user might want to know!
-//if ($ticket->isClosed() && !$ticket->isReopenable())
-//    $warn = sprintf(
-//            __('Current ticket status (%s) does not allow the end user to reply.'),
-//            $ticket->getStatus());
-//elseif ($ticket->isAssigned()
-//        && (($staff && $staff->getId()!=$thisstaff->getId())
-//            || ($team && !$team->hasMember($thisstaff))
-//        ))
-//    $warn.= sprintf('&nbsp;&nbsp;<span class="Icon assignedTicket">%s</span>',
-//            sprintf(__('Ticket is assigned to %s'),
-//                implode('/', $ticket->getAssignees())
-//                ));
-
 if (!$errors['err']) {
 
     if ($lock && $lock->getStaffId()!=$thisstaff->getId())

@@ -1137,8 +1137,8 @@ implements CustomListItem, TemplateVariable {
 
     function isReopenable() {
 
-        if (strcasecmp($this->get('state'), 'closed'))
-            return true;
+        /*if (strcasecmp($this->get('state'), 'closed'))
+            return true;*/
 
         if (($c=$this->getConfiguration())
                 && $c['allowreopen']

@@ -430,14 +430,25 @@ if (isset($_SESSION['advsearch'])) {
 }
 
 if($stats['solved']) {
-    $nav->addSubMenu(array('desc'=>'Resuelto ('.number_format($stats['solved']).')',
-                           'title'=>'Tickets resueltos',
+    $nav->addSubMenu(array('desc'=>'Ejecutado ('.number_format($stats['solved']).')',
+                           'title'=>'Tickets ejecutados',
                            'href'=>'tickets.php?status=solved',
                            'iconclass'=>'closedTickets'),
                         ($_REQUEST['status']=='solved'));
 
     if(!$sysnotice && $stats['solved']>10)
         $sysnotice=sprintf(__('%d solved tickets!'),$stats['solved']);
+}
+
+if($stats['verified']) {
+    $nav->addSubMenu(array('desc'=>'Verificado ('.number_format($stats['verified']).')',
+                           'title'=>'Tickets verificados',
+                           'href'=>'tickets.php?status=verified',
+                           'iconclass'=>'closedTickets'),
+                        ($_REQUEST['status']=='verified'));
+
+    if(!$sysnotice && $stats['verified']>10)
+        $sysnotice=sprintf(__('%d verified tickets!'),$stats['verified']);
 }
 
 $nav->addSubMenu(array('desc' => __('Closed'),

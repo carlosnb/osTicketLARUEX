@@ -22,7 +22,7 @@ $mylock = ($lock && $lock->getStaffId() == $thisstaff->getId()) ? $lock : null;
 $id    = $ticket->getId();    //Ticket ID.
 
 //Useful warnings and errors the user might want to know!
-if ($ticket->isClosed() && !$ticket->isReopenable())
+if ($ticket->isClosed() && !$ticket->isReopenable($role))
     $warn = sprintf(
             __('Current ticket status (%s) does not allow the end user to reply.'),
             $ticket->getStatus());
@@ -97,7 +97,7 @@ if($ticket->isOverdue())
 
             <?php
             // Assign
-            if ($ticket->isOpen() && $role->hasPerm(TicketModel::PERM_ASSIGN)) {?>
+            if (!$ticket->isClosed() && $role->hasPerm(TicketModel::PERM_ASSIGN)) {?>
             <span class="action-button pull-right"
                 data-dropdown="#action-dropdown-assign"
                 data-placement="bottom"
@@ -145,7 +145,7 @@ if($ticket->isOverdue())
                 <?php
                  }
 
-                 if($ticket->isOpen() && ($dept && $dept->isManager($thisstaff))) {
+                 if(!$ticket->isClosed() && ($dept && $dept->isManager($thisstaff))) {
 
                     if($ticket->isAssigned()) { ?>
                         <li><a  class="confirm-action" id="ticket-release" href="#release"><i class="icon-user"></i> <?php
@@ -200,15 +200,6 @@ if($ticket->isOverdue())
                     echo $ticket->getId(); ?>/status/delete"
                     data-redirect="tickets.php"><i class="icon-trash"></i> <?php
                     echo __('Delete Ticket'); ?></a></li>
-                <?php
-                 }
-                 if ($ticket->isClosed() && $role->hasPerm(TicketModel::PERM_VERIFY)
-                         && !$ticket->isVerified()) {
-                     ?>
-                    <li class="danger"><a class="ticket-action" href="#tickets/<?php
-                    echo $ticket->getId(); ?>/verify"
-                    data-redirect="tickets.php?id=<?php echo $ticket->getId(); ?>"><i class="icon-check"></i> <?php
-                    echo __('Verify Ticket'); ?></a></li>
                 <?php
                  }
                 ?>
@@ -379,7 +370,7 @@ if($ticket->isOverdue())
         <td width="50%">
             <table cellspacing="0" cellpadding="4" width="100%" border="0">
                 <?php
-                if($ticket->isOpen()) { ?>
+                if(!$ticket->isClosed()) { ?>
                 <tr>
                     <th width="100"><?php echo __('Assigned To');?>:</th>
                     <td>
@@ -417,17 +408,31 @@ if($ticket->isOverdue())
                     <td><?php echo Format::datetime($ticket->getEstDueDate()?:$ticket->getLastDueDate()); // Se ha añadido la última fecha de vencimiento ?></td>
                 </tr>
                 <?php
+                } else if($ticket->isSolved()){ ?>
+                <tr>
+                    <th><?php echo __('Due Date');?>:</th>
+                    <td><?php echo Format::datetime($ticket->getEstDueDate()?:$ticket->getLastDueDate()); // Se ha añadido la última fecha de vencimiento ?></td>
+                </tr>
+                <tr>
+                    <th><?php echo 'Fecha de ejecución';?>:</th>
+                    <td><?php 
+                        echo Format::datetime($ticket->getVerifyDate()); 
+                    ?></td>
+                </tr>
+                <?php
+                } else if($ticket->isVerified()){ ?>
+                <tr>
+                    <th><?php echo 'Fecha de verificación';?>:</th>
+                    <td><?php 
+                        echo Format::datetime($ticket->getVerifyDate()); 
+                    ?></td>
+                </tr>
+                <?php
                 } else { ?>
                 <tr>
                     <th><?php echo __('Close Date');?>:</th>
                     <td><?php 
                         echo Format::datetime($ticket->getCloseDate()); 
-                    ?></td>
-                </tr>
-                <tr>
-                    <th><?php echo __('Verify Date');?>:</th>
-                    <td><?php 
-                        echo Format::datetime($ticket->getVerifyDate()); 
                     ?></td>
                 </tr>
                 <?php
@@ -536,7 +541,8 @@ if ($errors['err'] && isset($_POST['a'])) {
 } elseif($warn) { ?>
     <div id="msg_warning"><?php echo $warn; ?></div>
 <?php
-} ?>
+} 
+?>
 
 <div class="sticky bar stop actions" id="response_options"
 >
@@ -709,27 +715,33 @@ if ($errors['err'] && isset($_POST['a'])) {
                 </td>
                 <td>
                     <?php
-                    $outstanding2 = false;
-                    if (is_string($warning=$ticket->isSolveable())) {
-                        $outstanding2 = true;
-                        echo sprintf('<div class="warning-banner">%s</div>', $warning);
-                    }
-                    $outstanding = false;
-                    if ($role->hasPerm(TicketModel::PERM_CLOSE)
-                            && is_string($warning=$ticket->isCloseable())) {
-                        $outstanding = true;
-                        echo sprintf('<div class="warning-banner">%s</div>', $warning);
-                    }
+                        $warning = "";
+                        if (!$ticket->isSolveable($warning) && $warning) {
+                            echo sprintf('<div class="warning-banner">%s</div>', $warning);
+                        }
+
+                        if ($role->hasPerm(TicketModel::PERM_VERIFY)
+                                && !$ticket->isVerifiable($warning) && $warning) {
+                            echo sprintf('<div class="warning-banner">%s</div>', $warning);
+                        }
+
+                        if ($role->hasPerm(TicketModel::PERM_CLOSE)
+                                && !$ticket->isCloseable($warning) && $warning) {
+                            echo sprintf('<div class="warning-banner">%s</div>', $warning);
+                        }
                     ?>
                     <select name="reply_status_id">
                     <?php
                     $statusId = $info['reply_status_id'] ?: $ticket->getStatusId();
-                    $states = array('open');
-                    if (!$outstanding2)
+                    $states = array($ticket->getState());
+                    if ($ticket->isReopenable($role))
+                        $states[] = 'open';
+                    if ($ticket->isSolveable())
                         $states[] = 'solved';
-                    if ($role->hasPerm(TicketModel::PERM_CLOSE) && !$outstanding)
-                        $states = array_merge($states, array('closed'));
-
+                    if ($role->hasPerm(TicketModel::PERM_VERIFY) && $ticket->isVerifiable())
+                        $states[] = 'verified';
+                    if ($role->hasPerm(TicketModel::PERM_CLOSE) && $ticket->isCloseable())
+                        $states[] = 'closed';
                     foreach (TicketStatusList::getStatuses(
                                 array('states' => $states)) as $s) {
                         if (!$s->isEnabled()) continue;
@@ -811,14 +823,34 @@ if ($errors['err'] && isset($_POST['a'])) {
                 </td>
                 <td>
                     <div class="faded"></div>
+                    <?php
+                        $warning = "";
+                        if (!$ticket->isSolveable($warning) && $warning) {
+                            echo sprintf('<div class="warning-banner">%s</div>', $warning);
+                        }
+
+                        if ($role->hasPerm(TicketModel::PERM_VERIFY)
+                                && !$ticket->isVerifiable($warning) && $warning) {
+                            echo sprintf('<div class="warning-banner">%s</div>', $warning);
+                        }
+
+                        if ($role->hasPerm(TicketModel::PERM_CLOSE)
+                                && !$ticket->isCloseable($warning) && $warning) {
+                            echo sprintf('<div class="warning-banner">%s</div>', $warning);
+                        }
+                    ?>
                     <select name="note_status_id">
                         <?php
                         $statusId = $info['note_status_id'] ?: $ticket->getStatusId();
-                        $states = array('open');
-                        $states[] = 'solved';
-                        if ($ticket->isCloseable() === true
-                                && $role->hasPerm(TicketModel::PERM_CLOSE))
-                            $states = array_merge($states, array('closed'));
+                        $states = array($ticket->getState());
+                        if ($ticket->isReopenable($role))
+                            $states[] = 'open';
+                        if ($ticket->isSolveable())
+                            $states[] = 'solved';
+                        if ($ticket->isVerifiable() && $role->hasPerm(TicketModel::PERM_VERIFY))
+                            $states[] = 'verified';
+                        if ($ticket->isCloseable() && $role->hasPerm(TicketModel::PERM_CLOSE))
+                            $states[] = 'closed';
                         foreach (TicketStatusList::getStatuses(
                                     array('states' => $states)) as $s) {
                             if (!$s->isEnabled()) continue;

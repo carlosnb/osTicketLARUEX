@@ -53,17 +53,6 @@ if ($agent->hasPerm(Ticket::PERM_DELETE, false)) {?>
 <?php
 }
 
-
-// Mass Verify
-if ($agent->hasPerm(Ticket::PERM_VERIFY, false)) {?>
-<span class="red button action-button">
- <a class="tickets-action" id="tickets-delete" data-placement="bottom"
-    data-toggle="tooltip" title="<?php echo __('Verify'); ?>"
-    href="#tickets/mass/verify"><i class="icon-check"></i></a>
-</span>
-<?php
-}
-
 ?>
 <script type="text/javascript">
 $(function() {

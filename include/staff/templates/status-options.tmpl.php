@@ -15,15 +15,27 @@ $actions= array(
             'icon'  => 'icon-gears',
             'action' => 'solve'
             ),
-        );
+        'verified' => array(
+            'icon' => 'icon-check',
+            'action' => 'verify'
+        )
+    );
 
-$states = array('open');
-if (!$ticket || (!$ticket->getMissingFieldsRequiredToSolve() && $ticket->isSolveable())) {
+$states = array('');
+if (!$ticket || $ticket->isReopenable($thisstaff->getRole($ticket->getDept()))) {
+    $states[] = 'open';
+}
+if (!$ticket || $ticket->isSolveable()) {
     $states[] = 'solved';
 }
+if ($thisstaff->getRole($ticket ? $ticket->getDeptId() : null)->hasPerm(TicketModel::PERM_VERIFY)
+        && (!$ticket || $ticket->isVerifiable())) {
+    $states[] = 'verified';
+}
 if ($thisstaff->getRole($ticket ? $ticket->getDeptId() : null)->hasPerm(TicketModel::PERM_CLOSE)
-        && (!$ticket || !$ticket->getMissingRequiredFields()))
-    $states = array_merge($states, array('closed'));
+        && (!$ticket || $ticket->isCloseable())) {
+    $states[] = 'closed';
+}
 
 $statusId = $ticket ? $ticket->getStatusId() : 0;
 $nextStatuses = array();
